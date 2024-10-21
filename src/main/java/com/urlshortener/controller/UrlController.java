@@ -44,9 +44,9 @@ public class UrlController {
             @ApiResponse(responseCode = "200", description = "Redirect to original URL", content = @Content),
             @ApiResponse(responseCode = "404", description = "Short URL not found or expired", content = @Content)
     })
-    public RedirectView redirectToOriginalUrl(@PathVariable("id") String shortCode) {
+    public ResponseEntity<Void> redirectToOriginalUrl(@PathVariable("id") String shortCode) {
         String originalUrl = urlShortenerService.getOriginalUrl(shortCode);
-        return new RedirectView(URI.create(originalUrl).toString());
+        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(originalUrl)).build();
     }
 
     @DeleteMapping("/{id}")
