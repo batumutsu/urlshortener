@@ -1,6 +1,6 @@
 package com.urlshortener.config.util;
 
-import com.urlshortener.models.ShortenedUrl;
+import com.urlshortener.url.models.ShortenedUrl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

@@ -1,7 +1,7 @@
-package com.urlshortener.dto;
+package com.urlshortener.url.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.urlshortener.models.ShortenedUrl;
+import com.urlshortener.url.models.ShortenedUrl;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import java.io.Serializable;

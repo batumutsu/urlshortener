@@ -1,7 +1,11 @@
-package com.urlshortener.models;
+package com.urlshortener.url.models;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import com.urlshortener.auth.model.User;
+import com.urlshortener.common.models.BaseEntity;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,5 +27,9 @@ public class ShortenedUrl extends BaseEntity {
     private LocalDateTime expiresAt;
 
     private Long clicks;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 }
 

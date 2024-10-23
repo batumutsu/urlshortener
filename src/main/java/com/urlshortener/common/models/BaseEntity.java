@@ -1,4 +1,4 @@
-package com.urlshortener.models;
+package com.urlshortener.common.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

@@ -1,12 +1,14 @@
-package com.urlshortener.service.impl;
+package com.urlshortener.url.service.impl;
 
+import com.urlshortener.auth.model.User;
+import com.urlshortener.common.helpers.AuthenticationHelpers;
 import com.urlshortener.config.exception.ConflictException;
 import com.urlshortener.config.exception.NotFoundException;
 import com.urlshortener.config.util.GenerateUniqueShortCode;
-import com.urlshortener.dto.ShortUrlResponseDto;
-import com.urlshortener.models.ShortenedUrl;
-import com.urlshortener.repository.ShortenedUrlRepository;
-import com.urlshortener.service.UrlShortenerService;
+import com.urlshortener.url.dto.ShortUrlResponseDto;
+import com.urlshortener.url.models.ShortenedUrl;
+import com.urlshortener.url.repository.ShortenedUrlRepository;
+import com.urlshortener.url.service.UrlShortenerService;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -26,14 +29,20 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
     private final ShortenedUrlRepository shortenedUrlRepository;
     private final GenerateUniqueShortCode generateUniqueShortCode;
     private final JobScheduler jobScheduler;
+    private final AuthenticationHelpers authenticationHelpers;
 
     @Override
     @Transactional
     public ShortUrlResponseDto createShortenedUrl(String originalUrl, String customId, Long ttl) {
+        User currentUser = authenticationHelpers.getCurrentUser();
+
         LocalDateTime expiresAt = ttl != null ? LocalDateTime.now().plusSeconds(ttl) : null;
 
         // Check if original URL already exists when custom ID is not provided
-        ShortenedUrl existingShortenedUrl = customId == null ? shortenedUrlRepository.findByOriginalUrl(originalUrl): null;
+        ShortenedUrl existingShortenedUrl = customId == null ? currentUser != null
+            ? shortenedUrlRepository.findByOriginalUrlAndUser(originalUrl, currentUser)
+            : shortenedUrlRepository.findByOriginalUrlAndUserIsNull(originalUrl): null;
+
         if (existingShortenedUrl != null) {
             log.info("Original URL {} already exists", originalUrl);
             return new ShortUrlResponseDto(existingShortenedUrl);
@@ -51,7 +60,7 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
             jobScheduler.schedule(expiresAt, () -> deleteExpiredUrl(shortCode));
         }
 
-        ShortenedUrl shortenedUrl = shortenedUrlRepository.save(new ShortenedUrl(shortCode, originalUrl, expiresAt, 0L));
+        ShortenedUrl shortenedUrl = shortenedUrlRepository.save(new ShortenedUrl(shortCode, originalUrl, expiresAt, 0L, currentUser));
 
         log.info("Created shortened URL with code: {}", shortenedUrl.getShortCode());
         return new ShortUrlResponseDto(shortenedUrl);
@@ -60,10 +69,15 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
     @Override
     @Transactional
     public String getOriginalUrl(String shortCode) {
-        Optional<ShortenedUrl> optionalShortenedUrl = shortenedUrlRepository.findByShortCode(shortCode);
+        User currentUser = authenticationHelpers.getCurrentUser();
+
+        Optional<ShortenedUrl> optionalShortenedUrl = currentUser != null
+            ? shortenedUrlRepository.findByShortCodeAndUser(shortCode, currentUser)
+            : shortenedUrlRepository.findByShortCodeAndUserIsNull(shortCode);
+
         if (optionalShortenedUrl.isEmpty() || (optionalShortenedUrl.get().getExpiresAt() != null &&
                 optionalShortenedUrl.get().getExpiresAt().isBefore(LocalDateTime.now()))) {
-            throw new NotFoundException("Short URL not found or expired");
+            throw new NotFoundException("Short URL not found or does not belong to current user");
         }
         ShortenedUrl shortenedUrl = optionalShortenedUrl.get();
         shortenedUrl.setClicks(shortenedUrl.getClicks() + 1L);
@@ -75,8 +89,20 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
     @Override
     @Transactional
     public void deleteShortenedUrl(String shortCode) {
-        shortenedUrlRepository.deleteByShortCode(shortCode);
-        log.info("Deleted URL with code: {}", shortCode);
+        User currentUser = authenticationHelpers.getCurrentUser();
+
+        Optional<ShortenedUrl> shortenedUrl = currentUser != null
+            ? shortenedUrlRepository.findByShortCodeAndUser(shortCode, currentUser)
+            : shortenedUrlRepository.findByShortCodeAndUserIsNull(shortCode);
+
+        if(shortenedUrl.isPresent()){
+            log.info("Deleted URL with code: {}", shortCode);
+            shortenedUrlRepository.deleteByShortCode(shortCode);
+        }
+        else
+        {
+            throw new NotFoundException("Short URL not found or does not belong to current user");
+        }
     }
 
     @Transactional
@@ -87,7 +113,7 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
     }
 
     @Transactional
-    @Job(name = "Delete all expired urls")
+    @Job(name = "Delete all expired urls", labels = "url-shortener-delete-all-expired-urls", retries = -1)
     public void deleteExpiredUrls() {
         LocalDateTime now = LocalDateTime.now();
         int deletedCount = shortenedUrlRepository.deleteAllByExpiresAtBefore(now);

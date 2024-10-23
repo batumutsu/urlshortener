@@ -6,13 +6,32 @@
 
 A robust Spring Boot application that transforms long URLs into concise, shareable short links. Perfect for social media, analytics, and anywhere character count matters.
 
-## 🚀 Features
+# 🚀 Features
 
 - **URL Shortening**: Convert lengthy URLs into brief, memorable codes
 - **Custom Aliases**: Create personalized short codes (up to 6 characters)
 - **Expiration Control**: Set time-to-live (TTL) for temporary links
 - **Redirection**: Seamlessly redirect short codes to original URLs
 - **Link Management**: Delete shortened URLs when no longer needed
+
+### **Authenticated Users**
+- Can create private short URLs from original URLs
+- Have exclusive access to manage their created short URLs
+- Can delete their own short URLs
+- Receive unique short codes even for previously shortened URLs
+
+### **Non-Authenticated Users**
+
+- Can create public short URLs
+- Receive unique short codes for any original URL
+- Created URLs are not associated with any user account
+- Public short URLs can be accessed by anyone
+
+### **Security Notes**
+
+- Each original URL generates unique short codes for different users
+- Private URLs are protected from unauthorized access
+- Public URLs maintain existing functionality for backward compatibility
 
 ## 🛠️ Tech Stack
 
@@ -24,11 +43,56 @@ A robust Spring Boot application that transforms long URLs into concise, shareab
 
 ## 🔗 API Endpoints
 
-### Create Shortened URL
+### Create user
 
 ```http
-POST /shorten
+POST /auth/signup
 Content-Type: application/json
+
+{
+  "email": "example-email@gmail.com",
+  "password": "Password@example123",
+  "fullName": "John Doe",
+  "role":[USER] (Optional)
+}
+```
+
+#### Response
+```
+User example-email@gmail.com was successfully registered.
+```
+
+### Login
+
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "example-email@gmail.com",
+  "password": "Password@example123"
+}
+```
+
+#### Response
+
+```json
+{
+   "token": "your-token",
+   "expiresIn": 3600000
+}
+```
+
+### Create Shortened URL
+
+- Supports authenticated requests
+- Creates private URLs for authenticated users
+- Creates public URLs for non-authenticated users
+
+```http
+POST /mixed/url/shorten
+Content-Type: application/json
+Authorization: Bearer your-token-here (Optional)
 
 {
   "originalUrl": "https://example.com/very/long/url",
@@ -49,14 +113,22 @@ Content-Type: application/json
 
 ### Redirect to Original URL
 
+- Authenticated users can access their private URLs
+- Public URLs remain accessible to all users
+
 ```http
-GET /{id}
+GET /mixed/url/{id}
+Authorization: Bearer your-token-here (Optional)
 ```
 
 ### Delete Shortened URL
 
+- Authenticated users can delete their own short URLs
+- Public URLs can be deleted by any user
+
 ```http
-DELETE /{id}
+DELETE /mixed/url/{id}
+Authorization: Bearer your-token-here (Optional)
 ```
 
 ## 🚀 Getting Started
@@ -110,6 +182,8 @@ export KEY_ALPHABETS=your_key_alphabets
 export KEY_LENGTH=6
 export APP_CONTEXT_PATH=/api/v1
 export DOCKER_POSTGRES_BASE_URL=jdbc:postgresql://db:5432
+export JWT_SECRET_KEY=your-secret-key
+export JWT_EXPIRATION_TIME=your-choosen-expiration-time
 ```
 
 ## 🧪 Testing
@@ -120,10 +194,11 @@ Run the test suite:
 mvn clean test
 ```
 
-Or use Docker:
+Or use Docker to pull all dependencies, run tests
+and start the project:
 
 ```bash
-docker-compose up --build
+docker-compose up --build -d
 ```
 
 ## 📚 Usage Example
@@ -131,6 +206,7 @@ docker-compose up --build
 ```bash
 curl -X POST http://localhost:8080/api/v1/shorten \
      -H "Content-Type: application/json" \
+     -H 'Authorization: ••••••(Optional)' \
      -d '{
        "originalUrl": "http://example.com/very/long/url",
        "customId": "mylink",
