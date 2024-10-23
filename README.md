@@ -85,6 +85,10 @@ Content-Type: application/json
 
 ### Create Shortened URL
 
+- Supports authenticated requests
+- Creates private URLs for authenticated users
+- Creates public URLs for non-authenticated users
+
 ```http
 POST /mixed/url/shorten
 Content-Type: application/json
@@ -109,12 +113,18 @@ Authorization: Bearer your-token-here (Optional)
 
 ### Redirect to Original URL
 
+- Authenticated users can access their private URLs
+- Public URLs remain accessible to all users
+
 ```http
 GET /mixed/url/{id}
 Authorization: Bearer your-token-here (Optional)
 ```
 
 ### Delete Shortened URL
+
+- Authenticated users can delete their own short URLs
+- Public URLs can be deleted by any user
 
 ```http
 DELETE /mixed/url/{id}
