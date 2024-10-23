@@ -1,6 +1,6 @@
-package com.urlshortener.service;
+package com.urlshortener.url.service;
 
-import com.urlshortener.dto.ShortUrlResponseDto;
+import com.urlshortener.url.dto.ShortUrlResponseDto;
 
 public interface UrlShortenerService {
 
