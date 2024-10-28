@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 
 @Configuration
 @RequiredArgsConstructor
-public class ApplicationConfig {
+public class AuthConfig {
     private final UserRepository userRepository;
 
     @Bean
