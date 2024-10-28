@@ -32,32 +32,5 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build with Maven
-        run: mvn -B package --file pom.xml
-
-      - name: Run Tests
-        run: mvn test
-
-      # Optional: Upload test results as artifacts
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-results
-          path: target/surefire-reports/
-
-      # Optional: Upload coverage reports
-      - name: Upload Coverage Reports
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-reports
-          path: target/site/jacoco/
-
-      # Optional: Cache Maven packages
-      - name: Cache Maven packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+      - name: Build and test with Maven
+        run: mvn --batch-mode package
